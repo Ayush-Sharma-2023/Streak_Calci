@@ -107,24 +107,35 @@
     renderGoals();
   }
 
+  // NEW: Edit Goal
+  function editGoal(id) {
+    let goals = loadGoals();
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+
+    const newGoalText = prompt("Edit your goal:", goal.goal);
+    if (newGoalText && newGoalText.trim() !== "") {
+      goal.goal = newGoalText.trim();
+      saveGoals(goals);
+      renderGoals();
+    }
+  }
+
   function renderGoals() {
     const container = document.getElementById("goalsList");
     let goals = loadGoals();
     const today = getToday();
 
-    // Sort by currentStreak (descending)
+    // Sort by success %
     const todayDate = new Date(getToday());
-
-goals.sort((a, b) => {
-  const getSuccess = (g) => {
-    const start = new Date(g.startDate);
-    const maxPossible = Math.max(1, Math.ceil((todayDate - start) / (1000 * 60 * 60 * 24)) + 1);
-    return g.totalChecked / maxPossible;
-  };
-
-  return getSuccess(b) - getSuccess(a);
-});
-
+    goals.sort((a, b) => {
+      const getSuccess = (g) => {
+        const start = new Date(g.startDate);
+        const maxPossible = Math.max(1, Math.ceil((todayDate - start) / (1000 * 60 * 60 * 24)) + 1);
+        return g.totalChecked / maxPossible;
+      };
+      return getSuccess(b) - getSuccess(a);
+    });
 
     container.innerHTML = "";
 
@@ -134,7 +145,6 @@ goals.sort((a, b) => {
 
       const info = document.createElement("div");
       info.className = "flex-1";
-
       info.innerHTML = `
         <p class="font-semibold">${goal.goal}</p>
         <p class="text-sm text-gray-500">Start: ${goal.startDate}</p>
@@ -148,31 +158,36 @@ goals.sort((a, b) => {
       checkbox.checked = goal.lastChecked === today;
       checkbox.onclick = () => toggleCheck(goal.id, checkbox.checked);
 
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "✏️";
+      editBtn.title = "Edit goal";
+      editBtn.className = "text-blue-500 text-lg hover:scale-110 transition-transform";
+      editBtn.onclick = () => editGoal(goal.id);
+
       const deleteBtn = document.createElement("button");
       deleteBtn.textContent = "🗑️";
       deleteBtn.title = "Delete goal";
       deleteBtn.className = "text-red-500 text-lg hover:scale-110 transition-transform";
       deleteBtn.onclick = () => deleteGoal(goal.id);
 
-      // Calculate Max Possible Streak and Success %
-const start = new Date(goal.startDate);
-const todayDate = new Date(getToday());
-const diffTime = todayDate - start;
-const maxPossible = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
-const success = ((goal.totalChecked / maxPossible) * 100).toFixed(1);
+      // Calculate stats
+      const start = new Date(goal.startDate);
+      const diffTime = todayDate - start;
+      const maxPossible = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+      const success = ((goal.totalChecked / maxPossible) * 100).toFixed(1);
 
-stats.innerHTML += `
-  <div class="text-sm space-y-1">
-    <p>Current Streak: <strong>${goal.currentStreak}</strong></p>
-    <p>Max Streak: <strong>${goal.maxStreak}</strong></p>
-    <p>Total Success: <strong>${goal.totalChecked}</strong></p>
-    <p>Max Possible Streak: <strong>${maxPossible}</strong></p>
-    <p>Success: <strong>${success}%</strong></p>
-  </div>
-`;
-
+      stats.innerHTML += `
+        <div class="text-sm space-y-1">
+          <p>Current Streak: <strong>${goal.currentStreak}</strong></p>
+          <p>Max Streak: <strong>${goal.maxStreak}</strong></p>
+          <p>Total Success: <strong>${goal.totalChecked}</strong></p>
+          <p>Max Possible Streak: <strong>${maxPossible}</strong></p>
+          <p>Success: <strong>${success}%</strong></p>
+        </div>
+      `;
 
       stats.prepend(checkbox);
+      stats.appendChild(editBtn);
       stats.appendChild(deleteBtn);
       div.appendChild(info);
       div.appendChild(stats);

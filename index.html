@@ -6,20 +6,28 @@
   <title>Streak Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-6">
-  <div class="max-w-2xl mx-auto bg-white p-6 rounded shadow">
-    <h1 class="text-2xl font-bold mb-4">Streak Calculator</h1>
+<body class="bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 min-h-screen p-6 text-white">
+  <div class="max-w-3xl mx-auto bg-white text-gray-900 p-6 rounded-2xl shadow-2xl">
+    <h1 class="text-3xl font-extrabold mb-6 flex items-center gap-2">
+      🔥 Streak Calculator
+    </h1>
 
     <!-- Input Form -->
     <div class="flex flex-col sm:flex-row gap-4 mb-6">
-      <input id="goalInput" type="text" placeholder="Enter Goal" class="flex-1 p-2 border rounded" />
-      <input id="dateInput" type="date" class="p-2 border rounded" />
-      <button onclick="addGoal()" class="bg-blue-500 text-white px-4 py-2 rounded">Add</button>
+      <input id="goalInput" type="text" placeholder="Enter Goal" 
+             class="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none" />
+      <input id="dateInput" type="date" 
+             class="p-3 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none" />
+      <button onclick="addGoal()" 
+              class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-2 rounded-lg shadow hover:scale-105 transition">
+        ➕ Add
+      </button>
     </div>
 
     <!-- Goals List -->
     <div id="goalsList" class="space-y-4"></div>
   </div>
+
 <script>
   const STORAGE_KEY = "streak_goals";
 
@@ -66,7 +74,6 @@
     const goals = loadGoals();
     const today = getToday();
     const goal = goals.find(g => g.id === id);
-
     if (!goal) return;
 
     if (checked) {
@@ -87,12 +94,9 @@
       goal.lastChecked = today;
     } else {
       if (goal.lastChecked !== today) return;
-
-      // Undo today's check
       goal.lastChecked = null;
       goal.totalChecked = Math.max(0, goal.totalChecked - 1);
       goal.currentStreak = Math.max(0, goal.currentStreak - 1);
-      // maxStreak remains unchanged
     }
 
     saveGoals(goals);
@@ -107,12 +111,10 @@
     renderGoals();
   }
 
-  // NEW: Edit Goal
   function editGoal(id) {
     let goals = loadGoals();
     const goal = goals.find(g => g.id === id);
     if (!goal) return;
-
     const newGoalText = prompt("Edit your goal:", goal.goal);
     if (newGoalText && newGoalText.trim() !== "") {
       goal.goal = newGoalText.trim();
@@ -121,82 +123,75 @@
     }
   }
 
-  function renderGoals() {
-    const container = document.getElementById("goalsList");
-    let goals = loadGoals();
-    const today = getToday();
+  function getBadge(streak) {
+    if (streak >= 30) return "🏆 Gold";
+    if (streak >= 15) return "🥈 Silver";
+    if (streak >= 7) return "🥉 Bronze";
+    return "🎯 Starter";
+  }
 
-    // Sort by success %
-    const todayDate = new Date(getToday());
-    goals.sort((a, b) => {
-      const getSuccess = (g) => {
-        const start = new Date(g.startDate);
-        const maxPossible = Math.max(1, Math.ceil((todayDate - start) / (1000 * 60 * 60 * 24)) + 1);
-        return g.totalChecked / maxPossible;
-      };
-      return getSuccess(b) - getSuccess(a);
-    });
+function renderGoals() {
+  const container = document.getElementById("goalsList");
+  let goals = loadGoals();
+  const today = getToday();
+  const todayDate = new Date(getToday());
 
-    container.innerHTML = "";
-
-    goals.forEach(goal => {
-      const div = document.createElement("div");
-      div.className = "flex items-center justify-between border p-3 rounded";
-
-      const info = document.createElement("div");
-      info.className = "flex-1";
-      info.innerHTML = `
-        <p class="font-semibold">${goal.goal}</p>
-        <p class="text-sm text-gray-500">Start: ${goal.startDate}</p>
-      `;
-
-      const stats = document.createElement("div");
-      stats.className = "flex items-center gap-4";
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.checked = goal.lastChecked === today;
-      checkbox.onclick = () => toggleCheck(goal.id, checkbox.checked);
-
-      const editBtn = document.createElement("button");
-      editBtn.textContent = "✏️";
-      editBtn.title = "Edit goal";
-      editBtn.className = "text-blue-500 text-lg hover:scale-110 transition-transform";
-      editBtn.onclick = () => editGoal(goal.id);
-
-      const deleteBtn = document.createElement("button");
-      deleteBtn.textContent = "🗑️";
-      deleteBtn.title = "Delete goal";
-      deleteBtn.className = "text-red-500 text-lg hover:scale-110 transition-transform";
-      deleteBtn.onclick = () => deleteGoal(goal.id);
-
-      // Calculate stats
-      const start = new Date(goal.startDate);
+  // ✅ Sort by success % (descending)
+  goals.sort((a, b) => {
+    const getSuccess = (g) => {
+      const start = new Date(g.startDate);
       const diffTime = todayDate - start;
       const maxPossible = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
-      const success = ((goal.totalChecked / maxPossible) * 100).toFixed(1);
+      return g.totalChecked / maxPossible;
+    };
+    return getSuccess(b) - getSuccess(a);
+  });
 
-      stats.innerHTML += `
-        <div class="text-sm space-y-1">
-          <p>Current Streak: <strong>${goal.currentStreak}</strong></p>
-          <p>Max Streak: <strong>${goal.maxStreak}</strong></p>
-          <p>Total Success: <strong>${goal.totalChecked}</strong></p>
-          <p>Max Possible Streak: <strong>${maxPossible}</strong></p>
-          <p>Success: <strong>${success}%</strong></p>
-        </div>
-      `;
+  container.innerHTML = "";
 
-      stats.prepend(checkbox);
-      stats.appendChild(editBtn);
-      stats.appendChild(deleteBtn);
-      div.appendChild(info);
-      div.appendChild(stats);
-      container.appendChild(div);
-    });
-  }
+  goals.forEach(goal => {
+    const start = new Date(goal.startDate);
+    const diffTime = todayDate - start;
+    const maxPossible = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+    const success = ((goal.totalChecked / maxPossible) * 100).toFixed(1);
+
+    const div = document.createElement("div");
+    div.className = "p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl shadow hover:scale-[1.02] transition";
+
+    div.innerHTML = `
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-bold">${goal.goal}</h2>
+        <span class="text-sm px-2 py-1 rounded bg-purple-200 text-purple-800">${getBadge(goal.currentStreak)}</span>
+      </div>
+      <p class="text-sm text-gray-600 mb-2">📅 Start: ${goal.startDate}</p>
+
+      <!-- Progress Bar -->
+      <div class="w-full bg-gray-200 rounded-full h-3 mb-2">
+        <div class="bg-gradient-to-r from-purple-500 to-indigo-500 h-3 rounded-full" style="width:${success}%;"></div>
+      </div>
+      <p class="text-sm mb-3">Success: <strong>${success}%</strong></p>
+
+      <div class="grid grid-cols-2 gap-2 text-sm text-gray-700 mb-3">
+        <p>🔥 Current Streak: <strong>${goal.currentStreak}</strong></p>
+        <p>🏅 Max Streak: <strong>${goal.maxStreak}</strong></p>
+        <p>✅ Total Checks: <strong>${goal.totalChecked}</strong></p>
+        <p>📈 Max Possible: <strong>${maxPossible}</strong></p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <input type="checkbox" ${goal.lastChecked === today ? "checked" : ""} 
+               onclick="toggleCheck(${goal.id}, this.checked)" 
+               class="w-5 h-5 accent-purple-600" />
+        <button onclick="editGoal(${goal.id})" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">✏️ Edit</button>
+        <button onclick="deleteGoal(${goal.id})" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">🗑️ Delete</button>
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
+}
 
   window.onload = renderGoals;
 </script>
-
 </body>
 </html>

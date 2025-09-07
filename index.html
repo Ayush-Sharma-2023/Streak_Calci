@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Streak Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+  <div class="max-w-2xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4">Streak Calculator</h1>
+
+    <!-- Input Form -->
+    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+      <input id="goalInput" type="text" placeholder="Enter Goal" class="flex-1 p-2 border rounded" />
+      <input id="dateInput" type="date" class="p-2 border rounded" />
+      <button onclick="addGoal()" class="bg-blue-500 text-white px-4 py-2 rounded">Add</button>
+    </div>
+
+    <!-- Goals List -->
+    <div id="goalsList" class="space-y-4"></div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "streak_goals";
+
+    function getToday() {
+      return new Date().toISOString().split("T")[0];
+    }
+
+    function loadGoals() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    }
+
+    function saveGoals(goals) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(goals));
+    }
+
+    function addGoal() {
+      const goal = document.getElementById("goalInput").value.trim();
+      const date = document.getElementById("dateInput").value;
+
+      if (!goal || !date) {
+        alert("Please fill both fields.");
+        return;
+      }
+
+      const goals = loadGoals();
+      goals.push({
+        id: Date.now(),
+        goal,
+        startDate: date,
+        lastChecked: null,
+        currentStreak: 0,
+        maxStreak: 0,
+        totalChecked: 0
+      });
+
+      saveGoals(goals);
+      renderGoals();
+      document.getElementById("goalInput").value = "";
+      document.getElementById("dateInput").value = "";
+    }
+
+    function toggleCheck(id) {
+      const goals = loadGoals();
+      const today = getToday();
+      const goal = goals.find(g => g.id === id);
+
+      if (goal.lastChecked === today) {
+        alert("You already checked this today.");
+        return;
+      }
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yDate = yesterday.toISOString().split("T")[0];
+
+      if (goal.lastChecked === yDate) {
+        goal.currentStreak += 1;
+      } else {
+        goal.currentStreak = 1;
+      }
+
+      goal.maxStreak = Math.max(goal.maxStreak, goal.currentStreak);
+      goal.totalChecked += 1;
+      goal.lastChecked = today;
+
+      saveGoals(goals);
+      renderGoals();
+    }
+
+    function renderGoals() {
+      const container = document.getElementById("goalsList");
+      const goals = loadGoals();
+      const today = getToday();
+
+      container.innerHTML = "";
+
+      goals.forEach(goal => {
+        const div = document.createElement("div");
+        div.className = "flex items-center justify-between border p-3 rounded";
+
+        const info = document.createElement("div");
+        info.className = "flex-1";
+
+        info.innerHTML = `
+          <p class="font-semibold">${goal.goal}</p>
+          <p class="text-sm text-gray-500">Start: ${goal.startDate}</p>
+        `;
+
+        const stats = document.createElement("div");
+        stats.className = "flex items-center gap-4";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = goal.lastChecked === today;
+        checkbox.disabled = checkbox.checked;
+        checkbox.onclick = () => toggleCheck(goal.id);
+
+        stats.innerHTML += `
+          <div class="text-sm">
+            <p>Current Streak: <strong>${goal.currentStreak}</strong></p>
+            <p>Max Streak: <strong>${goal.maxStreak}</strong></p>
+            <p>Total success: <strong>${goal.totalChecked}</strong></p>
+          </div>
+        `;
+
+        stats.prepend(checkbox);
+        div.appendChild(info);
+        div.appendChild(stats);
+        container.appendChild(div);
+      });
+    }
+
+    window.onload = renderGoals;
+  </script>
+</body>
+</html>
